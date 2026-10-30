@@ -1,0 +1,144 @@
+# Skill: Maximum User Value, Minimum User Effort
+
+## Purpose
+
+Design and build products that deliver **maximum user value with minimum effort, time, and cognitive load**.
+
+The primary objective is to help users achieve their intended outcome as quickly, simply, and reliably as possible.
+
+**Optimize for task completion, not engagement, retention, clicks, or revenue extraction.**
+
+This philosophy applies to every layer of the product: UI, UX, architecture, business logic, features, workflows, and performance.
+
+## Core Principles
+
+### 1. Immediate Value
+The first screen must directly serve the user's primary goal. No unnecessary onboarding, promotions, or distractions.
+
+### 2. Minimum Actions
+Minimize clicks, taps, typing, navigation, decisions, and steps required to complete a task.
+
+### 3. Eliminate Everything Unnecessary
+Every element must directly contribute to the user's goal. If it does not, remove it.
+
+### 4. One Screen, One Primary Task
+Each screen must have one clear purpose and one obvious primary action. Avoid competing elements.
+
+### 5. Zero Learning Curve
+Interfaces must be immediately understandable without tutorials, explanations, or instructions.
+
+### 6. Intelligent Defaults
+Automatically fill in everything the system already knows or can reliably determine. Never make users perform work the system can do.
+
+### 7. Ask Only When Necessary
+Request information only when it is essential and cannot be safely inferred.
+
+### 8. Minimize Choices
+Present only essential options. Keep advanced settings available on demand.
+
+### 9. Contextual Relevance
+Show information, controls, and actions only when they become relevant to the current task.
+
+### 10. Speed Is a Feature
+Prioritize instant feedback, low latency, fast loading, and responsive interactions. Avoid unnecessary animations and waiting.
+
+### 11. Predictability
+The same action must consistently produce the same expected result. Avoid unexpected interface changes.
+
+### 12. Transparency and Honesty
+No dark patterns, hidden conditions, misleading interactions, forced upsells, or artificial complexity.
+
+### 13. User Control
+Make it easy to undo, cancel, edit, go back, and recover from mistakes.
+
+### 14. Visual Silence
+Use minimal colors, text, decoration, and visual noise. Maintain a clear visual hierarchy.
+
+### 15. Never Interrupt Without Reason
+No unnecessary popups, banners, notifications, promotions, or unsolicited suggestions.
+
+### 16. Never Make Users Repeat Themselves
+Preserve relevant context, preferences, and previously provided information. Avoid redundant input.
+
+### 17. Hide Internal Complexity
+The system may be technically complex, but the user experience must remain simple and effortless.
+
+### 18. Never Sacrifice UX for Revenue
+Do not introduce friction, manipulation, or unnecessary features to increase sales, engagement, or business metrics.
+
+### 19. Measure Actual User Value
+Prioritize:
+- Time to successful outcome
+- Number of actions required
+- Task completion rate
+- Error and failure rates
+- User satisfaction
+
+Do not optimize for clicks, impressions, session duration, or engagement at the expense of user value.
+
+### 20. Remove Before Adding
+Every new feature must justify its existence. Prefer removing complexity over adding functionality.
+
+## Agent Decision Rules
+
+Before introducing any UI element, feature, interaction, workflow, or architectural decision, ask:
+
+1. **Does this help the user achieve their goal faster?**
+2. **Does this make the experience simpler or more convenient?**
+3. **Can we achieve the same outcome without it?**
+
+If an element provides no clear user benefit, remove it.
+
+If two solutions provide equivalent value, choose the one requiring fewer user actions and less cognitive effort.
+
+If complexity is unavoidable, handle it internally rather than transferring it to the user.
+
+If a feature benefits business metrics but harms user experience, reject it.
+
+If an existing flow can be simplified, simplify it before adding new functionality.
+
+## Implementation Requirements
+
+When designing, coding, reviewing, or modifying a product:
+
+- Identify the user's primary goal first.
+- Design the shortest reliable path to that goal.
+- Make the primary action immediately visible.
+- Eliminate unnecessary screens, fields, confirmations, and decisions.
+- Use reliable defaults and existing context.
+- Keep secondary functionality unobtrusive.
+- Provide immediate, meaningful feedback.
+- Handle errors gracefully with minimal recovery effort.
+- Preserve user control and prevent destructive surprises.
+- Optimize performance and perceived responsiveness.
+- Reject decorative complexity and engagement-driven distractions.
+- Continuously question whether each component is necessary.
+
+**Never confuse feature richness with product quality.**
+
+## Priority Order
+
+When trade-offs are necessary, prioritize:
+
+1. Successful completion of the user's goal
+2. Simplicity and clarity
+3. Minimum user effort
+4. Speed and responsiveness
+5. Reliability and predictability
+6. Accessibility and user control
+7. Visual aesthetics
+8. Secondary features and business objectives
+
+Never compromise safety, security, privacy, or correctness merely to reduce steps.
+
+## Definition of Done
+
+A solution is complete only when:
+
+- The primary task is obvious.
+- The user can complete it with minimal effort.
+- No unnecessary elements compete for attention.
+- No redundant information is requested.
+- The interface behaves predictably.
+- The user remains in control.
+- The system
