@@ -25,6 +25,844 @@ The primary engineering priorities, in order, are:
 
 Never sacrifice correctness or reliability for a synthetic benchmark improvement.
 
+# Production-Ready Project Foundation — Mandatory Zero-Day Infrastructure
+
+## 1. Fundamental Rule: Production-Ready Before Feature Development
+
+Every new web project MUST begin with a complete, working, production-oriented engineering foundation.
+
+Before implementing the first product feature, establish:
+
+- Reproducible local development.
+- One-command application startup.
+- Production-equivalent local and staging environments.
+- GitHub Actions CI/CD.
+- Automated end-to-end testing.
+- Native Git hooks.
+- Commit conventions.
+- Formatting and linting.
+- Dependency and supply-chain security.
+- Environment and secret management.
+- Database migrations.
+- Structured observability.
+- Health checks.
+- Automated deployment.
+- Rollback and recovery.
+- Backup and restore procedures.
+- Minimal operational documentation.
+
+This foundation is not optional, deferred technical debt, or a future enhancement.
+
+**A project without a working delivery and operations pipeline is not ready for feature development.**
+
+The foundation must be implemented and verified, not merely described in documentation.
+
+---
+
+## 2. Strict Monolithic Architecture
+
+### Mandatory architecture
+
+Use a modular monolith.
+
+The default production architecture is:
+
+```text
+                  Internet
+                     |
+               Reverse Proxy
+              (if necessary)
+                     |
+              Rust Application
+              ┌───────────────┐
+              │ HTTP Server   │
+              │ SSR Renderer  │
+              │ SPA Endpoints │
+              │ Business Logic│
+              │ Static Assets │
+              │ Observability │
+              │ Background Jobs│
+              └───────────────┘
+                     |
+                 Database
+```
+
+The application MUST remain one deployable Rust executable unless an explicit technical requirement makes this impossible.
+
+### Forbidden by default
+
+- Microservices.
+- Service meshes.
+- Distributed application architectures.
+- Multiple independently deployed backend services.
+- Message brokers without demonstrated necessity.
+- Kubernetes for simple deployments.
+- Separate frontend hosting infrastructure without a concrete benefit.
+- Dedicated background worker services for tasks the monolith can safely execute.
+- API gateways for a single application.
+- Unnecessary sidecars.
+- Unnecessary reverse proxies.
+- Infrastructure abstractions without operational value.
+
+### Permitted supporting infrastructure
+
+Introduce only when required:
+
+- PostgreSQL for relational persistence.
+- SQLite for suitable single-instance or low-complexity deployments.
+- Redis for proven shared caching, coordination, or ephemeral state needs.
+- Object storage for durable file storage.
+- A reverse proxy for TLS, routing, or operational requirements.
+- An external observability collector or managed telemetry endpoint.
+- Kubernetes API integration when the application genuinely requires it.
+
+Supporting infrastructure is not permission to split the application into microservices.
+
+Prefer the smallest number of independently managed components.
+
+**Default: one Rust application + one database.**
+
+Redis, Kubernetes, and other infrastructure must be justified rather than automatically provisioned.
+
+---
+
+## 3. One-Command Development Environment
+
+A fresh checkout MUST be runnable using one documented command.
+
+Recommended interface:
+
+```bash
+just dev
+```
+
+The command must:
+
+1. Validate required development tools.
+2. Start required infrastructure.
+3. Apply database migrations.
+4. Build the application.
+5. Start the Rust server.
+6. Enable automatic rebuild/restart during development.
+7. Make the application accessible at a predictable local URL.
+8. Display useful startup errors.
+9. Cleanly stop managed processes when terminated.
+
+Use a small `justfile`, Makefile, or equivalent task runner.
+
+Do not create a custom task orchestration framework.
+
+### Required developer commands
+
+```bash
+just dev          # Start complete development environment
+just test         # Run end-to-end tests
+just lint         # Run static checks
+just fmt          # Format source code
+just check        # Validate project quality gates
+just build        # Build production artifact
+just preview      # Run production build locally
+just staging      # Start production-equivalent local stack
+just migrate      # Apply database migrations
+just ci           # Reproduce CI checks locally
+just doctor       # Diagnose missing tools and configuration
+```
+
+Commands must behave consistently across local development and CI.
+
+Use the same underlying scripts rather than duplicating business logic in GitHub Actions YAML.
+
+If Docker is required, prefer a minimal Docker Compose configuration.
+
+If native processes provide a simpler and sufficiently equivalent environment, use them instead.
+
+---
+
+## 4. Production Parity by Design
+
+Development, testing, staging, and production must use the same application architecture.
+
+### Required invariants
+
+- Same Rust application code.
+- Same release build configuration for staging and production.
+- Same database engine and compatible major version where database behavior matters.
+- Same migration mechanism.
+- Same HTTP routing.
+- Same asset generation.
+- Same security configuration model.
+- Same telemetry instrumentation.
+- Same startup and shutdown behavior.
+- Same container image or immutable application artifact for staging and production.
+
+Differences should be limited to:
+
+- Environment configuration.
+- Secrets.
+- Hostnames.
+- Data.
+- Resource limits.
+- Infrastructure endpoints.
+
+### Environment model
+
+```text
+Local Development
+      |
+      v
+Production-Equivalent Local Preview
+      |
+      v
+GitHub Actions E2E
+      |
+      v
+Staging
+      |
+      v
+Production
+```
+
+Avoid maintaining separate implementations for development and production.
+
+Tests must not rely on a special mock-only application architecture.
+
+Use real infrastructure dependencies in integration environments whenever practical.
+
+Mock only uncontrollable external systems, such as payment providers or third-party services, through explicit boundary contracts.
+
+---
+
+## 5. GitHub Actions as the Default CI/CD Platform
+
+Every project MUST contain working GitHub Actions workflows.
+
+Keep workflows small, explicit, and understandable.
+
+### Required workflow structure
+
+```text
+.github/
+  workflows/
+    ci.yml
+    deploy.yml
+```
+
+Additional workflows are permitted only when they solve a concrete operational requirement.
+
+### CI pipeline
+
+On every pull request:
+
+1. Check out the repository.
+2. Install or restore the pinned Rust toolchain.
+3. Restore safe build caches.
+4. Validate formatting.
+5. Run Clippy.
+6. Validate dependencies and security policies.
+7. Build the production application.
+8. Start the production-equivalent test environment.
+9. Apply real database migrations.
+10. Run end-to-end tests.
+11. Collect diagnostic artifacts on failure.
+12. Tear down resources.
+
+The pipeline must fail on any required quality-gate failure.
+
+### E2E-only testing policy
+
+**End-to-end tests are the sole mandatory automated behavioral test layer.**
+
+Do not introduce mandatory unit-test or integration-test suites by default.
+
+The E2E suite must exercise the complete application through public interfaces, preferably real browsers.
+
+Use Playwright or another proven browser automation tool.
+
+Do not build a custom browser automation framework.
+
+Static analysis, formatting, dependency audits, and compilation remain mandatory quality gates, but are not substitutes for E2E tests.
+
+### Required E2E coverage
+
+Every applicable project must test:
+
+- Application startup.
+- Health endpoint.
+- Initial SSR response.
+- Meaningful HTML without JavaScript.
+- Client-side navigation.
+- Native full-page navigation fallback.
+- Back/forward history.
+- Direct deep links.
+- Forms and validation.
+- Authentication and authorization when present.
+- Database-backed workflows.
+- Important business journeys.
+- Error handling.
+- Failed network requests.
+- Browser console errors.
+- Unhandled promise rejections.
+- Accessibility of critical journeys.
+- Mobile viewport behavior.
+- Slow-network conditions.
+- Relevant browser compatibility.
+- Production asset loading.
+- Database migration compatibility.
+
+Tests must assert user-observable behavior rather than internal implementation details.
+
+### Browser testing matrix
+
+At minimum:
+
+- Chromium.
+- Firefox.
+- WebKit.
+
+Include a low-end Android-oriented Chromium configuration with realistic CPU and network throttling.
+
+Use actual Android hardware or device farms periodically when available.
+
+Desktop emulation must not be represented as equivalent to physical Android testing.
+
+### Test determinism
+
+Tests must be:
+
+- Isolated.
+- Repeatable.
+- Parallel-safe where possible.
+- Independent of execution order.
+- Independent of arbitrary sleeps.
+- Based on explicit readiness conditions.
+- Safe to rerun.
+- Supported by deterministic seed data.
+
+Avoid flaky timing assumptions.
+
+Capture screenshots, traces, console logs, and relevant server logs when tests fail.
+
+---
+
+## 6. Extremely Simple Continuous Deployment
+
+Deployment must be triggered automatically after merging into the protected main branch.
+
+The preferred flow:
+
+```text
+Pull Request
+     |
+     v
+GitHub Actions CI
+     |
+     v
+Required Checks Pass
+     |
+     v
+Merge to main
+     |
+     v
+Build Immutable Artifact
+     |
+     v
+Deploy to Staging
+     |
+     v
+Smoke E2E Tests
+     |
+     v
+Deploy to Production
+     |
+     v
+Health Verification
+```
+
+Where the hosting platform supports it, promote the same tested artifact instead of rebuilding.
+
+### Deployment requirements
+
+- One immutable release artifact.
+- One documented deployment mechanism.
+- No manual SSH commands for normal deployments.
+- No manually copied files.
+- No manually edited production configuration.
+- No secrets committed to Git.
+- No unnecessary deployment orchestration.
+- No custom deployment framework.
+- No mandatory human intervention for routine releases.
+
+Use GitHub Actions environments and scoped permissions.
+
+Prefer OIDC-based authentication when supported by the deployment provider.
+
+Pin third-party GitHub Actions to immutable commit SHAs.
+
+Use concurrency controls to prevent conflicting deployments.
+
+### Deployment strategy
+
+Prefer the simplest strategy supported by the hosting environment that provides safe recovery.
+
+Possible approaches:
+
+- Atomic artifact replacement.
+- Container replacement.
+- Rolling deployment.
+- Blue/green deployment when justified.
+
+Do not introduce Kubernetes solely to obtain deployment automation.
+
+### Database migrations
+
+Migrations must be:
+
+- Version-controlled.
+- Deterministic.
+- Automatically applied through a controlled deployment step.
+- Compatible with the deployment strategy.
+- Tested against representative database state.
+
+Prefer backward-compatible expand/contract migrations.
+
+Do not assume arbitrary destructive migrations can be rolled back safely.
+
+### Rollback
+
+Provide a documented and tested rollback procedure.
+
+Application rollback should redeploy the previous immutable artifact.
+
+Database recovery must be handled separately and safely.
+
+Do not automatically reverse destructive migrations.
+
+---
+
+## 7. Native Git Hooks and Repository Conventions
+
+Use Git's native hook mechanism.
+
+Do not require Husky or Node.js-based Git hook managers.
+
+Configure hooks through:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### Required structure
+
+```text
+.githooks/
+  pre-commit
+  commit-msg
+  pre-push
+```
+
+### Pre-commit
+
+Perform fast checks:
+
+- Formatting verification.
+- Relevant lightweight linting.
+- Secret detection where practical.
+- Obvious repository policy violations.
+
+Keep pre-commit latency low.
+
+### Commit message validation
+
+Use Conventional Commits.
+
+Examples:
+
+```text
+feat(auth): add passwordless login
+fix(nav): restore scroll position
+perf(ssr): reduce render allocations
+refactor(db): simplify query handling
+test(e2e): cover checkout recovery
+chore(ci): pin workflow actions
+docs: document local setup
+```
+
+Use a lightweight native script for validation.
+
+Avoid unnecessary commit tooling dependencies.
+
+### Pre-push
+
+Run a bounded set of useful checks.
+
+Do not automatically run the entire expensive E2E matrix on every push unless explicitly configured.
+
+### Enforcement
+
+Local Git hooks are convenience safeguards, not security boundaries.
+
+GitHub branch protection and required CI checks must enforce repository policies.
+
+Hooks can be bypassed; CI must remain authoritative.
+
+---
+
+## 8. Formatting, Linting, and Static Analysis
+
+### Rust
+
+Required:
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo check
+```
+
+Use a pinned Rust toolchain.
+
+Prefer `rustfmt` and Clippy over custom style rules.
+
+### JavaScript
+
+Use a minimal, pinned formatter and linter setup.
+
+Prefer established tools such as ESLint and a formatter only when they provide meaningful coverage.
+
+Do not introduce a large JavaScript dependency tree solely for formatting a tiny frontend.
+
+### CSS and HTML
+
+Apply consistent formatting and appropriate validation.
+
+Use standards-based validation where practical.
+
+Do not duplicate checks already reliably performed by existing tooling.
+
+### Dependency policy
+
+- Commit lockfiles.
+- Pin toolchain versions.
+- Audit Rust dependencies.
+- Audit JavaScript build dependencies if present.
+- Minimize transitive dependencies.
+- Remove unused packages.
+- Avoid unnecessary runtime dependencies.
+
+---
+
+## 9. Repository Layout
+
+Prefer a compact structure:
+
+```text
+project/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml
+│   │   └── deploy.yml
+│   ├── dependabot.yml
+│   └── CODEOWNERS
+├── .githooks/
+│   ├── pre-commit
+│   ├── commit-msg
+│   └── pre-push
+├── .cargo/
+│   └── config.toml
+├── src/
+│   ├── main.rs
+│   ├── config.rs
+│   ├── http.rs
+│   ├── routes/
+│   ├── domain/
+│   ├── db/
+│   ├── views/
+│   └── observability.rs
+├── web/
+│   ├── css/
+│   ├── js/
+│   └── assets/
+├── tests/
+│   └── e2e/
+├── migrations/
+├── deploy/
+├── scripts/
+├── .env.example
+├── .gitignore
+├── rust-toolchain.toml
+├── Cargo.toml
+├── Cargo.lock
+├── justfile
+├── Dockerfile
+├── compose.yaml
+├── README.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+└── AGENTS.md
+```
+
+This is a reference layout, not a requirement to create empty directories.
+
+Do not create files or modules without actual responsibilities.
+
+Prefer fewer files when the project is small.
+
+---
+
+## 10. Environment and Configuration Management
+
+Use typed Rust configuration.
+
+Configuration must be validated during startup.
+
+Provide `.env.example` with documented non-secret variables.
+
+Never commit actual credentials.
+
+Use environment variables or a managed secret store for secrets.
+
+Fail fast on invalid critical configuration.
+
+Provide safe development defaults where appropriate.
+
+Separate configuration from code.
+
+Avoid complex configuration frameworks unless genuinely necessary.
+
+---
+
+## 11. Database Lifecycle
+
+Every persistent application must have:
+
+- Versioned migrations.
+- Reproducible schema initialization.
+- Deterministic test fixtures.
+- Connection pool limits.
+- Query timeout policies.
+- Transaction boundaries.
+- Backup procedures.
+- Restore procedures.
+- Migration verification in CI.
+- Explicit data retention policies.
+
+Use database-native capabilities instead of recreating transactions, constraints, or concurrency control in application code.
+
+Use PostgreSQL or SQLite according to actual requirements.
+
+Do not automatically add Redis.
+
+---
+
+## 12. Observability From Day Zero
+
+Observability must work before feature development begins.
+
+### Required server capabilities
+
+- Structured logs.
+- Request IDs.
+- Distributed trace context where appropriate.
+- Error classification.
+- Request latency metrics.
+- Health and readiness endpoints.
+- Graceful shutdown telemetry.
+- Resource usage metrics.
+
+### Required client capabilities
+
+- Centralized JavaScript error capture.
+- Unhandled rejection capture.
+- Navigation telemetry.
+- Core Web Vitals.
+- Meaningful user interaction events.
+- Network failure reporting.
+
+### Correlation
+
+Connect frontend and backend diagnostics using safe request correlation identifiers.
+
+### Operational rules
+
+- Never log secrets.
+- Never collect sensitive form values by default.
+- Apply telemetry sampling and retention policies.
+- Bound telemetry memory usage.
+- Avoid blocking application execution for logging.
+- Make production failures diagnosable without reproducing them locally.
+
+---
+
+## 13. Security and Supply-Chain Foundation
+
+Establish:
+
+- Least-privilege GitHub Actions permissions.
+- Protected main branch.
+- Required status checks.
+- Dependabot or equivalent dependency update automation.
+- Secret scanning.
+- Dependency vulnerability auditing.
+- Lockfile verification.
+- Pinned build tooling.
+- Container image scanning when containers are used.
+- Non-root container execution.
+- Minimal runtime image.
+- Secure deployment credentials.
+- Artifact provenance where supported.
+- Documented vulnerability reporting.
+
+Do not add unnecessary security products or services when native GitHub and ecosystem tooling already meet the requirement.
+
+---
+
+## 14. Operational Readiness
+
+Before the first feature, provide a concise operational runbook.
+
+It must explain:
+
+- How to start the application.
+- How to run E2E tests.
+- How to deploy.
+- How to roll back.
+- How to inspect errors.
+- How to view performance metrics.
+- How to apply migrations.
+- How to restore data.
+- How to rotate secrets.
+- How to recover from a failed deployment.
+
+### Required operational checks
+
+- Startup succeeds from a clean environment.
+- Shutdown completes gracefully.
+- Health checks reflect actual readiness.
+- Deployment failure does not silently leave the system unhealthy.
+- Database connectivity failures are observable.
+- Critical dependencies have timeouts.
+- Disk and memory exhaustion behavior is understood.
+- Backups are verified through restore testing.
+- Monitoring can detect a broken production deployment.
+
+Avoid operational tooling that is more complicated than the application itself.
+
+---
+
+## 15. Documentation and Developer Experience
+
+The README must provide a new developer with a short, reliable path from clone to running application.
+
+Target:
+
+```bash
+git clone <repository>
+cd <repository>
+just dev
+```
+
+The documentation must cover:
+
+- Required tools.
+- Local startup.
+- Test execution.
+- Architecture.
+- Environment configuration.
+- Deployment.
+- Troubleshooting.
+
+Use `AGENTS.md` to expose repository-specific engineering instructions to coding agents.
+
+Keep documentation close to actual executable commands.
+
+Avoid maintaining multiple conflicting sources of truth.
+
+---
+
+## 16. Zero-Day Acceptance Gate
+
+No product feature development may begin until the following foundation checks pass.
+
+### Repository
+
+- [ ] Git repository initialized.
+- [ ] Conventional Commits configured.
+- [ ] Native Git hooks configured.
+- [ ] Branch protection configured.
+- [ ] Required CI checks configured.
+
+### Application
+
+- [ ] Rust application compiles.
+- [ ] SSR test page renders.
+- [ ] Static assets are served.
+- [ ] Health endpoints work.
+- [ ] Graceful shutdown works.
+- [ ] Configuration validation works.
+
+### Development
+
+- [ ] One-command startup works.
+- [ ] Fresh checkout setup works.
+- [ ] Database initializes automatically.
+- [ ] Hot reload works where configured.
+- [ ] Production preview works locally.
+
+### Quality
+
+- [ ] Formatter works.
+- [ ] Linter works.
+- [ ] Dependency auditing works.
+- [ ] E2E tests run successfully.
+- [ ] E2E tests run against a real application.
+- [ ] JavaScript-disabled rendering is tested.
+- [ ] Browser console errors are detected.
+
+### Delivery
+
+- [ ] GitHub Actions CI passes.
+- [ ] Deployment workflow exists and is validated.
+- [ ] Staging deployment works.
+- [ ] Production deployment path is verified.
+- [ ] Post-deployment health verification works.
+- [ ] Rollback procedure is tested.
+
+### Operations
+
+- [ ] Structured logging works.
+- [ ] Centralized error capture works.
+- [ ] Performance telemetry works.
+- [ ] Database migrations work.
+- [ ] Backup and restore procedures are tested.
+- [ ] Secret management is configured.
+- [ ] Operational runbook exists.
+
+Where live deployment requires credentials or infrastructure not yet supplied, prepare and validate everything possible, clearly mark the remaining external dependency, and never falsely report the deployment as verified.
+
+---
+
+## 17. Final Rules
+
+**Infrastructure must be boring.**
+
+**Deployment must be automatic.**
+
+**Tests must exercise real user journeys.**
+
+**Development and production must share the same architecture.**
+
+**The entire application must start with one command.**
+
+**A monolith is the default, not a temporary compromise.**
+
+**CI/CD must be simpler than the application it deploys.**
+
+**Every deployment must be observable, verifiable, and recoverable.**
+
+**Do not build infrastructure for hypothetical scale. Build the smallest system that can reliably serve actual users.**
+
+The goal is a complete, maintainable, production-ready web engineering environment with the lowest reasonable operational complexity.
+
 ## Mandatory Standards-First Research — Context7 & Official Specifications
 
 ### Core rule
@@ -34,6 +872,280 @@ Never sacrifice correctness or reliability for a synthetic benchmark improvement
 Never begin writing custom JavaScript, CSS workarounds, abstractions, polyfills, or third-party integrations before checking Context7 and the relevant official web standards.
 
 The browser platform is the first dependency. Custom code is the last resort.
+
+# Production-Ready Project Foundation — Mandatory Zero-Day Infrastructure
+
+## 1. Fundamental Rule: Production-Ready Before Feature Development
+
+Every new web project MUST begin with a complete, working, production-oriented engineering foundation.
+
+Before implementing the first product feature, establish:
+
+- Reproducible local development.
+- One-command application startup.
+- Production-equivalent local and staging environments.
+- GitHub Actions CI/CD.
+- Automated end-to-end testing.
+- Native Git hooks.
+- Commit conventions.
+- Formatting and linting.
+- Dependency and supply-chain security.
+- Environment and secret management.
+- Database migrations.
+- Structured observability.
+- Health checks.
+- Automated deployment.
+- Rollback and recovery.
+- Backup and restore procedures.
+- Minimal operational documentation.
+
+This foundation is not optional, deferred technical debt, or a future enhancement.
+
+**A project without a working delivery and operations pipeline is not ready for feature development.**
+
+The foundation must be implemented and verified, not merely described in documentation.
+
+---
+
+## 2. Strict Monolithic Architecture
+
+### Mandatory architecture
+
+Use a modular monolith.
+
+The default production architecture is:
+
+```text
+                  Internet
+                     |
+               Reverse Proxy
+              (if necessary)
+                     |
+              Rust Application
+              ┌───────────────┐
+              │ HTTP Server   │
+              │ SSR Renderer  │
+              │ SPA Endpoints │
+              │ Business Logic│
+              │ Static Assets │
+              │ Observability │
+              │ Background Jobs│
+              └───────────────┘
+                     |
+                 Database
+```
+
+The application MUST remain one deployable Rust executable unless an explicit technical requirement makes this impossible.
+
+### Forbidden by default
+
+- Microservices.
+- Service meshes.
+- Distributed application architectures.
+- Multiple independently deployed backend services.
+- Message brokers without demonstrated necessity.
+- Kubernetes for simple deployments.
+- Separate frontend hosting infrastructure without a concrete benefit.
+- Dedicated background worker services for tasks the monolith can safely execute.
+- API gateways for a single application.
+- Unnecessary sidecars.
+- Unnecessary reverse proxies.
+- Infrastructure abstractions without operational value.
+
+### Permitted supporting infrastructure
+
+Introduce only when required:
+
+- PostgreSQL for relational persistence.
+- SQLite for suitable single-instance or low-complexity deployments.
+- Redis for proven shared caching, coordination, or ephemeral state needs.
+- Object storage for durable file storage.
+- A reverse proxy for TLS, routing, or operational requirements.
+- An external observability collector or managed telemetry endpoint.
+- Kubernetes API integration when the application genuinely requires it.
+
+Supporting infrastructure is not permission to split the application into microservices.
+
+Prefer the smallest number of independently managed components.
+
+**Default: one Rust application + one database.**
+
+Redis, Kubernetes, and other infrastructure must be justified rather than automatically provisioned.
+
+---
+
+## 3. One-Command Development Environment
+
+A fresh checkout MUST be runnable using one documented command.
+
+Recommended interface:
+
+```bash
+just dev
+```
+
+The command must:
+
+1. Validate required development tools.
+2. Start required infrastructure.
+3. Apply database migrations.
+4. Build the application.
+5. Start the Rust server.
+6. Enable automatic rebuild/restart during development.
+7. Make the application accessible at a predictable local URL.
+8. Display useful startup errors.
+9. Cleanly stop managed processes when terminated.
+
+Use a small `justfile`, Makefile, or equivalent task runner.
+
+Do not create a custom task orchestration framework.
+
+### Required developer commands
+
+```bash
+just dev          # Start complete development environment
+just test         # Run end-to-end tests
+just lint         # Run static checks
+just fmt          # Format source code
+just check        # Validate project quality gates
+just build        # Build production artifact
+just preview      # Run production build locally
+just staging      # Start production-equivalent local stack
+just migrate      # Apply database migrations
+just ci           # Reproduce CI checks locally
+just doctor       # Diagnose missing tools and configuration
+```
+
+Commands must behave consistently across local development and CI.
+
+Use the same underlying scripts rather than duplicating business logic in GitHub Actions YAML.
+
+If Docker is required, prefer a minimal Docker Compose configuration.
+
+If native processes provide a simpler and sufficiently equivalent environment, use them instead.
+
+---
+
+## 4. Production Parity by Design
+
+Development, testing, staging, and production must use the same application architecture.
+
+### Required invariants
+
+- Same Rust application code.
+- Same release build configuration for staging and production.
+- Same database engine and compatible major version where database behavior matters.
+- Same migration mechanism.
+- Same HTTP routing.
+- Same asset generation.
+- Same security configuration model.
+- Same telemetry instrumentation.
+- Same startup and shutdown behavior.
+- Same container image or immutable application artifact for staging and production.
+
+Differences should be limited to:
+
+- Environment configuration.
+- Secrets.
+- Hostnames.
+- Data.
+- Resource limits.
+- Infrastructure endpoints.
+
+### Environment model
+
+```text
+Local Development
+      |
+      v
+Production-Equivalent Local Preview
+      |
+      v
+GitHub Actions E2E
+      |
+      v
+Staging
+      |
+      v
+Production
+```
+
+Avoid maintaining separate implementations for development and production.
+
+Tests must not rely on a special mock-only application architecture.
+
+Use real infrastructure dependencies in integration environments whenever practical.
+
+Mock only uncontrollable external systems, such as payment providers or third-party services, through explicit boundary contracts.
+
+---
+
+## 5. GitHub Actions as the Default CI/CD Platform
+
+Every project MUST contain working GitHub Actions workflows.
+
+Keep workflows small, explicit, and understandable.
+
+### Required workflow structure
+
+```text
+.github/
+  workflows/
+    ci.yml
+    deploy.yml
+```
+
+Additional workflows are permitted only when they solve a concrete operational requirement.
+
+### CI pipeline
+
+On every pull request:
+
+1. Check out the repository.
+2. Install or restore the pinned Rust toolchain.
+3. Restore safe build caches.
+4. Validate formatting.
+5. Run Clippy.
+6. Validate dependencies and security policies.
+7. Build the production application.
+8. Start the production-equivalent test environment.
+9. Apply real database migrations.
+10. Run end-to-end tests.
+11. Collect diagnostic artifacts on failure.
+12. Tear down resources.
+
+The pipeline must fail on any required quality-gate failure.
+
+### E2E-only testing policy
+
+**End-to-end tests are the sole mandatory automated behavioral test layer.**
+
+Do not introduce mandatory unit-test or integration-test suites by default.
+
+The E2E suite must exercise the complete application through public interfaces, preferably real browsers.
+
+Use Playwright or another proven browser automation tool.
+
+Do not build a custom browser automation framework.
+
+Static analysis, formatting, dependency audits, and compilation remain mandatory quality gates, but are not substitutes for E2E tests.
+
+### Required E2E coverage
+
+Every applicable project must test:
+
+- Application startup.
+- Health endpoint.
+- Initial SSR response.
+- Meaningful HTML without JavaScript.
+- Client-side navigation.
+- Native full-page navigation fallback.
+- Back/forward history.
+- Direct deep links.
+- Forms and validation.
+- Authentication and authorization when present.
+- Database-backed workflows.
+- Important business journeys.
 
 ### Mandatory research workflow
 
@@ -1256,3 +2368,530 @@ JavaScript should provide only the enhancement that the browser cannot already d
 Build for real users on real devices, not for framework conventions or synthetic benchmark scores.
 
 **Maximum native capability. Minimum unnecessary machinery. Measured performance. Predictable memory. Complete actionable observability. Graceful failure.**
+
+
+# Extreme Server Resource Efficiency — Zero-Waste Infrastructure
+
+## Core Principle
+
+**The production machine exists to run the application, not an ecosystem of unnecessary infrastructure.**
+
+Every CPU cycle, byte of RAM, disk operation, network connection, background process, and running service must have a justified purpose.
+
+The default deployment target is a minimal Linux environment running a single optimized Rust application, with only the strictly necessary operating system and infrastructure components.
+
+**Zero unnecessary processes. Zero unnecessary infrastructure. Zero uncontrolled resource consumption.**
+
+This is a mandatory architectural constraint, not an optional optimization.
+
+---
+
+## 1. Minimal Production Footprint
+
+The production environment MUST contain only:
+
+- The Rust application executable.
+- The operating system components required to run it securely and reliably.
+- Required networking and TLS components.
+- Strictly necessary database or storage dependencies.
+- Minimal monitoring and recovery mechanisms.
+
+Everything else must be excluded unless justified by a concrete operational requirement.
+
+Do not install or run:
+
+- Development tools.
+- Compilers.
+- Node.js runtimes.
+- Package managers not needed at runtime.
+- Build systems.
+- Test runners.
+- Unnecessary background daemons.
+- Unnecessary monitoring agents.
+- Local dashboards.
+- Unnecessary reverse proxies.
+- Unnecessary container orchestration.
+- Unnecessary caches.
+- Unnecessary message brokers.
+- Unnecessary scheduled jobs.
+- Multiple copies of the application without an availability requirement.
+
+A production server must never become a development environment.
+
+---
+
+## 2. One Application Process by Default
+
+Prefer one Rust executable handling:
+
+- HTTP requests.
+- SSR.
+- Static asset delivery.
+- API endpoints.
+- Authentication.
+- Business logic.
+- Bounded background tasks.
+- Health checks.
+- Metrics exposition.
+- Structured logging.
+
+Do not split these responsibilities into separate services without a proven need.
+
+Prefer internal Rust modules and bounded asynchronous tasks over additional operating system processes.
+
+Do not create an additional worker service when the application can perform the work safely within its existing runtime.
+
+Every background task must have:
+
+- A concrete purpose.
+- Bounded memory usage.
+- Bounded concurrency.
+- Cancellation support.
+- A defined shutdown behavior.
+- Observable failures.
+
+No uncontrolled background loops.
+
+---
+
+## 3. Ultra-Low Memory Consumption
+
+Treat memory as a scarce resource.
+
+### Rust memory rules
+
+- Minimize heap allocations.
+- Prefer borrowing over cloning.
+- Avoid unnecessary intermediate buffers.
+- Avoid unnecessary serialization.
+- Avoid excessive `Arc`, `Mutex`, and reference-counted structures.
+- Avoid per-request heavyweight state.
+- Reuse buffers only when measurements justify it.
+- Stream large payloads.
+- Bound all queues and caches.
+- Release resources promptly.
+- Minimize idle connection state.
+- Avoid loading entire datasets into memory.
+- Prefer efficient data representations.
+- Avoid unnecessary memory fragmentation.
+
+Do not introduce custom memory allocators or unsafe memory optimizations without profiling evidence.
+
+### Mandatory memory limits
+
+Every potentially growing structure must have an explicit capacity or resource policy:
+
+- Request buffers.
+- Upload buffers.
+- Connection pools.
+- Async task queues.
+- Telemetry queues.
+- In-memory caches.
+- Background job queues.
+- WebSocket connections.
+- Session state.
+- Database query results.
+
+Unbounded memory growth is forbidden.
+
+### Idle memory
+
+Optimize not only peak memory but also idle memory.
+
+The application should consume minimal resources when there is no traffic.
+
+Avoid permanent allocations, polling loops, and idle background work without necessity.
+
+---
+
+## 4. Ultra-Low CPU Consumption
+
+The application must avoid consuming CPU when no useful work is required.
+
+Prefer:
+
+- Event-driven I/O.
+- Tokio asynchronous scheduling.
+- Kernel-backed readiness notifications.
+- Efficient connection reuse.
+- Bounded worker concurrency.
+- Efficient serialization.
+- Precomputed immutable data.
+- Cached static responses where appropriate.
+- Minimal request middleware.
+- Efficient algorithms.
+
+Avoid:
+
+- Busy waiting.
+- High-frequency polling.
+- Unnecessary periodic timers.
+- Continuous background scans.
+- Excessive thread creation.
+- Excessive task spawning.
+- Unnecessary synchronization.
+- Repeated expensive initialization.
+- Excessive logging.
+- CPU-heavy compression for negligible savings.
+
+### Idle CPU rule
+
+**The application should approach zero CPU consumption when idle, apart from essential maintenance and monitoring activity.**
+
+Any persistent idle CPU usage must be investigated and justified.
+
+---
+
+## 5. Minimal Operating System
+
+Prefer a minimal, maintained, security-supported Linux deployment.
+
+Use only necessary system services.
+
+For a direct VM deployment, prefer a simple service manager such as systemd.
+
+For a container deployment, use a minimal runtime image.
+
+Do not install a desktop environment or unrelated server packages.
+
+Do not disable essential operating system security, time synchronization, logging, or recovery mechanisms merely to reduce resource usage.
+
+Minimalism must not compromise operational correctness.
+
+---
+
+## 6. Minimal Container Strategy
+
+Containers are optional.
+
+Do not use Docker merely because it is conventional.
+
+Choose the simplest deployment model that meets the requirements.
+
+### Direct binary deployment
+
+Prefer when:
+
+- One application runs on one machine.
+- The environment is controlled.
+- Native process management is sufficient.
+- Isolation requirements are satisfied.
+- Deployment and rollback can remain simple.
+
+### Container deployment
+
+Prefer when:
+
+- Reproducibility materially improves.
+- Deployment infrastructure requires containers.
+- Isolation is valuable.
+- The operational overhead is acceptable.
+
+When using containers:
+
+- Use multi-stage builds.
+- Exclude build tools from the final image.
+- Use minimal runtime images.
+- Run as a non-root user.
+- Include only required runtime files.
+- Apply CPU and memory limits.
+- Use appropriate filesystem permissions.
+- Avoid unnecessary sidecars.
+- Avoid running a container orchestration stack on a single-purpose server without justification.
+
+Never run Docker-in-Docker in production.
+
+---
+
+## 7. Eliminate Unnecessary Infrastructure
+
+Do not automatically deploy:
+
+- Redis.
+- Nginx.
+- Traefik.
+- Kafka.
+- RabbitMQ.
+- Elasticsearch.
+- Prometheus.
+- Grafana.
+- Loki.
+- Jaeger.
+- Kubernetes.
+- Service meshes.
+- Separate worker containers.
+
+These technologies are not forbidden universally.
+
+They are forbidden **without a demonstrated requirement that cannot be met more simply**.
+
+Prefer built-in Rust capabilities, database-native functionality, operating system facilities, and managed external infrastructure where they reduce total operational cost.
+
+Do not replace a reliable database with an improvised in-memory persistence system merely to save a process.
+
+---
+
+## 8. Resource-Efficient Observability
+
+Maintain complete actionable observability without turning the server into a monitoring platform.
+
+Prefer:
+
+- Structured application logs.
+- Centralized error classification.
+- Lightweight metrics.
+- Request tracing with appropriate sampling.
+- Existing OS-level process metrics.
+- Bounded telemetry queues.
+- Asynchronous export.
+- External telemetry storage when justified.
+
+Avoid running a full monitoring stack on the same small production machine.
+
+### Logging efficiency
+
+- Avoid unnecessary debug logs in production.
+- Avoid expensive formatting on disabled log levels.
+- Bound log volume.
+- Rotate or retain logs according to policy.
+- Avoid logging entire request or response bodies.
+- Aggregate repetitive low-value events.
+- Never block request processing on telemetry export.
+
+Observability must be sufficient to diagnose failures while consuming a small, measured portion of the resource budget.
+
+---
+
+## 9. Disk and Storage Efficiency
+
+Minimize:
+
+- Binary size.
+- Container image size.
+- Temporary files.
+- Duplicate assets.
+- Excessive logs.
+- Cache duplication.
+- Unnecessary persistent state.
+- Disk writes.
+- Filesystem scans.
+- Intermediate artifacts.
+
+Build outside the production machine whenever practical.
+
+Deploy only the final artifact and required runtime files.
+
+Keep database files, backups, and persistent user data under explicit retention and capacity policies.
+
+Do not store unnecessary build caches or CI artifacts on production servers.
+
+---
+
+## 10. Network Efficiency
+
+Minimize:
+
+- Outbound requests.
+- Internal service calls.
+- Connection establishment.
+- Repeated DNS lookups.
+- Duplicate data transfer.
+- Excessive health-check traffic.
+- Telemetry payloads.
+- Unnecessary database round trips.
+
+Prefer in-process function calls over network boundaries.
+
+Use connection pooling with conservative limits.
+
+Use compression when its bandwidth savings justify CPU and memory costs.
+
+Do not enable expensive compression settings blindly.
+
+Use caching where it demonstrably reduces total resource consumption.
+
+---
+
+## 11. Rust Release Optimization
+
+Evaluate release configuration options:
+
+```toml
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+```
+
+This is an initial candidate configuration, not a universal optimum.
+
+Benchmark alternatives, including:
+
+- `opt-level = "z"` or `"s"` for size-sensitive deployments.
+- Fat versus thin LTO.
+- Different code generation unit counts.
+- Profile-guided optimization.
+- Target-specific compilation.
+- Alternative allocators.
+- Binary stripping.
+- Panic strategy.
+
+Do not assume the smallest binary is the fastest or uses the least runtime memory.
+
+Do not sacrifice required panic isolation or recovery behavior solely to reduce binary size.
+
+---
+
+## 12. Resource Budgets Are Mandatory
+
+Every project must define measurable production resource budgets.
+
+At minimum:
+
+| Resource | Required budget |
+|---|---|
+| Idle CPU | Near zero, measured |
+| Idle RAM | Lowest practical measured baseline |
+| Peak RAM | Explicit deployment-specific hard limit |
+| CPU under load | Bounded and benchmarked |
+| Threads | Justified, bounded configuration |
+| Connections | Explicit limits |
+| Queues | Explicit capacity |
+| Cache memory | Explicit maximum |
+| Disk | Capacity and retention limits |
+| Logs | Bounded volume and retention |
+| Telemetry | Explicit overhead budget |
+| Background tasks | Bounded concurrency and lifecycle |
+
+Do not invent universal RAM or CPU targets.
+
+Establish numerical limits from realistic workloads and deployment constraints.
+
+Run the application under constrained resources during CI or staging verification.
+
+Monitor both average consumption and peak behavior.
+
+---
+
+## 13. Resource-Constrained E2E Validation
+
+The E2E environment must verify behavior under realistic resource constraints.
+
+Test:
+
+- Low available RAM.
+- Restricted CPU quota.
+- Slow database responses.
+- Concurrent requests.
+- Large responses.
+- Client disconnects.
+- Request cancellation.
+- Server shutdown under load.
+- Queue saturation.
+- Dependency unavailability.
+- Disk capacity pressure where safe.
+- Telemetry exporter unavailability.
+
+The application must fail predictably rather than consume resources without limit.
+
+Resource exhaustion must not silently corrupt persistent state.
+
+---
+
+## 14. Resource-Aware Deployment
+
+The deployment process must not require installing build tools on the production machine.
+
+Preferred flow:
+
+```text
+GitHub Actions
+      |
+      v
+Build Optimized Rust Artifact
+      |
+      v
+Run E2E and Resource Checks
+      |
+      v
+Publish Immutable Artifact
+      |
+      v
+Deploy to Minimal Server
+      |
+      v
+Restart/Replace Application
+      |
+      v
+Verify Health and Resource Usage
+```
+
+Use the minimum number of running processes required by the selected deployment strategy.
+
+Temporary overlap during zero-downtime deployment is permitted when necessary.
+
+Avoid persistent duplication of infrastructure.
+
+---
+
+## 15. Mandatory Resource Audit
+
+Before declaring any implementation production-ready, inspect:
+
+1. Running processes and their purpose.
+2. Idle and peak RAM.
+3. Idle and loaded CPU.
+4. Thread and task counts.
+5. Open file descriptors.
+6. Connection pool sizes.
+7. Cache sizes and eviction behavior.
+8. Queue capacities.
+9. Background task activity.
+10. Disk usage and write amplification.
+11. Network request volume.
+12. Telemetry overhead.
+13. Binary and image size.
+14. Shutdown and resource cleanup.
+15. Behavior under resource pressure.
+
+For every significant resource consumer, ask:
+
+**Can this component be removed, combined, bounded, made lazy, or replaced by a cheaper native capability without reducing correctness, security, or reliability?**
+
+If yes, implement the simpler solution.
+
+---
+
+## 16. Strict Anti-Bloat Policy
+
+Do not add infrastructure merely because it is popular, conventional, or considered enterprise-grade.
+
+Every dependency, process, container, daemon, and background task must justify its ongoing resource cost.
+
+When choosing between two equally correct and reliable designs, prefer the one with:
+
+- Fewer processes.
+- Fewer dependencies.
+- Lower idle RAM.
+- Lower idle CPU.
+- Fewer network hops.
+- Fewer allocations.
+- Lower disk overhead.
+- Simpler deployment.
+- Lower operational maintenance cost.
+
+**The production server must run the application, not a collection of tools surrounding the application.**
+
+## Final Principle
+
+**Maximum useful work per CPU cycle.**
+
+**Maximum useful data per allocated byte.**
+
+**Minimum processes. Minimum dependencies. Minimum infrastructure.**
+
+**Near-zero idle overhead. Bounded peak consumption. Predictable failure behavior.**
+
+**One optimized Rust application. Only essential supporting services. Nothing else.**
+
