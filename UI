@@ -142,3 +142,108 @@ A solution is complete only when:
 - The interface behaves predictably.
 - The user remains in control.
 - The system
+
+
+## Mandatory Execution Protocol
+
+These rules are operational requirements, not suggestions.
+
+### 1. Outcome First
+
+Before designing or implementing anything:
+
+- Identify the exact user outcome.
+- Find the shortest reliable path to that outcome.
+- Determine what can be automated or eliminated.
+- Design the interface only after simplifying the workflow.
+
+Never start with screens, components, or conventional UI patterns.
+
+### 2. Zero UI First
+
+The best interaction is one that does not need to happen.
+
+Prefer, in order:
+
+1. No interaction — safely accomplish the task automatically.
+2. One action — complete the task immediately.
+3. Minimal guided interaction — only when necessary.
+4. Complex interaction — only when unavoidable.
+
+Never automate irreversible or consequential actions without appropriate user authorization.
+
+### 3. Complexity Must Be Earned
+
+Every additional screen, click, field, option, setting, component, dependency, or abstraction must have a clear justification.
+
+Complexity is a cost, not a feature.
+
+The default decision is to omit anything whose necessity cannot be demonstrated.
+
+### 4. Minimize Total User Effort
+
+Do not optimize only for the number of visible elements or clicks.
+
+Minimize the total cost of completing the task:
+
+- Physical interactions
+- Cognitive effort
+- Time spent
+- Decisions required
+- Information users must remember
+- Errors and recovery effort
+- Uncertainty and confusion
+
+A slightly more detailed screen is preferable if it reduces total effort.
+
+### 5. No Conventional UI by Default
+
+Never add common interface patterns simply because other products use them.
+
+Navigation bars, dashboards, cards, modals, onboarding flows, filters, settings, and multi-step forms must each justify their existence.
+
+Conventions are tools, not requirements.
+
+### 6. Progressive Disclosure Without Hidden Friction
+
+Show essential information and actions immediately.
+
+Reveal secondary complexity only when relevant.
+
+Never hide frequently needed actions behind extra navigation merely to make the interface look minimal.
+
+### 7. Mandatory Simplification Pass
+
+After every design or implementation, perform a removal pass:
+
+1. Remove unnecessary elements.
+2. Merge redundant steps.
+3. Eliminate avoidable decisions.
+4. Replace manual work with reliable automation.
+5. Remove unnecessary abstractions.
+6. Simplify the primary user journey.
+
+Do not consider the solution complete before this pass.
+
+### 8. Real-World Robustness
+
+Optimize for real users in real conditions:
+
+- Limited attention
+- Time pressure
+- Slow connections
+- Small screens
+- Mistakes and interruptions
+- Accessibility needs
+- Incomplete or unreliable data
+
+The system must remain understandable, recoverable, and useful outside ideal conditions.
+
+### 9. Reject Artificial Friction
+
+Never introduce unnecessary:
+
+- Confirmations
+- Registration requirements
+- Intermediate screens
+- Repeated inputs
