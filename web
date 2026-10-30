@@ -2895,3 +2895,824 @@ When choosing between two equally correct and reliable designs, prefer the one w
 
 **One optimized Rust application. Only essential supporting services. Nothing else.**
 
+# Mandatory Project Onboarding & Infrastructure Bootstrap Protocol
+
+## CRITICAL RULE — INFRASTRUCTURE FIRST, FEATURES SECOND
+
+Whenever a user requests a new website or web application, the agent MUST execute the infrastructure onboarding and bootstrap protocol BEFORE developing any product features.
+
+The mandatory execution order is:
+
+**User Request → Requirements Discovery → External Service Access → Infrastructure Provisioning → GitHub Repository → CI/CD → Observability → Production-Equivalent Staging → E2E Verification → Feature Development → Production Deployment.**
+
+Do not start implementing product features before the infrastructure foundation is operational.
+
+A minimal server-rendered health/test page is permitted during bootstrap to verify the complete delivery pipeline.
+
+## Phase 1 — Ask the User for Required External Services
+
+At the beginning of a new project, identify which external accounts, integrations, and infrastructure are needed.
+
+Ask the user for the following information in one concise, structured onboarding request.
+
+### 1. GitHub — Mandatory
+
+Determine:
+
+- GitHub account or organization.
+- Existing repository or permission to create a new repository.
+- Repository visibility: private or public.
+- Access to GitHub Actions.
+- Permission to configure repository secrets, environments, and branch protection.
+- Permission to configure deployment workflows.
+
+**Preferred:** Use an existing authorized GitHub integration or GitHub App.
+
+Never request a personal access token in plain chat when a secure authorization flow is available.
+
+If GitHub is not connected, guide the user through the minimum necessary connection process.
+
+### 2. Hosting Provider — Mandatory for Deployment
+
+Ask where the application should run.
+
+Supported options may include:
+
+- Hetzner Cloud.
+- DigitalOcean.
+- AWS.
+- Google Cloud.
+- Azure.
+- Fly.io.
+- Render.
+- An existing Linux VPS.
+- Another compatible hosting provider.
+
+If the user has no preference, recommend the simplest low-cost option that meets the requirements.
+
+Determine:
+
+- Provider.
+- Existing server or permission to provision one.
+- Target region.
+- Approximate monthly infrastructure budget.
+- Expected traffic or resource requirements, if known.
+- Whether automatic production deployment is authorized.
+
+Prefer a single small server running one optimized Rust monolith.
+
+Do not provision Kubernetes, managed clusters, or distributed infrastructure without a concrete requirement.
+
+### 3. Domain and DNS — Required for Public Production Websites
+
+Ask:
+
+- Is there an existing domain?
+- Which DNS provider manages it?
+- Is DNS configuration access available?
+- Should the application use the root domain or a subdomain?
+
+If the user has no domain, offer a temporary hosting-provider hostname where available.
+
+Configure HTTPS automatically using the simplest reliable supported mechanism.
+
+Never request domain registrar passwords.
+
+### 4. Observability Provider — Required Capability, Optional External Service
+
+Ask whether the user already uses:
+
+- Datadog.
+- Grafana Cloud.
+- Sentry.
+- Another observability platform.
+- No external observability provider.
+
+Prefer existing authorized integrations.
+
+If no provider is selected, recommend the lightest solution meeting the project's actual requirements.
+
+Do not automatically deploy Datadog agents, Prometheus, Grafana, Loki, Jaeger, or OpenTelemetry Collector on a small production server.
+
+Prefer native Rust structured tracing, bounded telemetry export, and external managed ingestion when appropriate.
+
+Observability must work even if no commercial platform is selected.
+
+### 5. Database — Only If Required
+
+Determine whether the application needs persistent data.
+
+If yes:
+
+- Prefer SQLite for suitable single-instance workloads.
+- Prefer PostgreSQL when concurrency, relational requirements, or operational constraints justify it.
+- Ask whether an existing database service is available.
+- Determine backup and retention requirements.
+
+Do not ask the user to choose a database engine unless the choice materially affects their requirements.
+
+Do not automatically provision Redis.
+
+### 6. Additional External Services — Only When Features Require Them
+
+Identify any genuinely necessary integrations:
+
+- Transactional email provider.
+- Object storage.
+- Payment provider.
+- Authentication provider.
+- External APIs.
+- SMS or push notification provider.
+- Search infrastructure.
+- AI services.
+- Analytics platforms.
+
+Do not request these services speculatively.
+
+For each required service, explain why it is needed and what access must be authorized.
+
+## Phase 2 — Minimize User Interaction
+
+The agent MUST NOT ask the user to configure infrastructure manually when it can perform the work through authorized tools.
+
+Follow this order:
+
+1. Detect already connected services and available credentials through authorized integrations.
+2. Reuse existing infrastructure where appropriate.
+3. Identify genuinely missing access.
+4. Request only the missing authorization or decision.
+5. Perform the configuration automatically.
+6. Verify the result.
+
+Ask onboarding questions together rather than interrupting development repeatedly.
+
+Do not request passwords, API tokens, SSH private keys, or secrets in ordinary chat messages.
+
+Use secure provider authorization, secret managers, or approved credential input mechanisms.
+
+Never assume access or permissions that have not been granted.
+
+## Phase 3 — Provision Infrastructure Before Product Development
+
+After receiving the necessary authorizations:
+
+1. Create or select the GitHub repository.
+2. Initialize the Rust project.
+3. Pin toolchains and dependencies.
+4. Configure native Git hooks.
+5. Configure Conventional Commits.
+6. Configure formatting and linting.
+7. Create the minimal application skeleton.
+8. Configure one-command development startup.
+9. Provision the smallest suitable hosting environment.
+10. Configure required database infrastructure.
+11. Configure secure environment variables and secrets.
+12. Configure HTTPS and DNS where applicable.
+13. Configure health checks and graceful shutdown.
+14. Configure structured logging and observability.
+15. Configure database migrations and backups.
+16. Configure staging and production environments.
+17. Configure deployment and rollback mechanisms.
+
+Do not introduce unnecessary processes, containers, or infrastructure services.
+
+## Phase 4 — Configure GitHub Actions CI/CD
+
+Before implementing product features, create working GitHub Actions workflows.
+
+### Pull request pipeline
+
+The CI pipeline must:
+
+- Verify formatting.
+- Run Rust Clippy and static checks.
+- Audit dependencies.
+- Build the production artifact.
+- Start the production-equivalent environment.
+- Run real browser E2E tests.
+- Check server-rendered HTML.
+- Check JavaScript-disabled functionality.
+- Capture diagnostic artifacts on failure.
+
+E2E tests are the required automated behavioral testing layer.
+
+### Deployment pipeline
+
+After merging into the protected main branch:
+
+1. Obtain or build the immutable release artifact.
+2. Deploy the artifact to staging.
+3. Run staging health and E2E smoke tests.
+4. Promote the same artifact to production.
+5. Verify production health.
+6. Verify essential SSR and asset delivery.
+7. Verify resource consumption.
+8. Trigger a safe rollback when supported and necessary.
+
+Use GitHub Actions environments, least-privilege credentials, and appropriate branch protection.
+
+Do not claim CI/CD is operational merely because YAML files exist.
+
+The workflows must actually be executed and verified wherever access permits.
+
+## Phase 5 — Configure Production-Equivalent Environments
+
+The application must support:
+
+```bash
+just dev
+just test
+just staging
+just preview
+just ci
+```
+
+Local development, E2E testing, staging, and production must share the same application architecture.
+
+Use the same Rust server, routing, rendering, migrations, and production build process.
+
+Use real infrastructure dependencies in staging and E2E environments wherever practical.
+
+Do not create a mock-only architecture that hides real deployment problems.
+
+## Phase 6 — Configure Observability Before Features
+
+Establish:
+
+- Centralized server request tracing.
+- Centralized error classification.
+- Request correlation IDs.
+- Client-side global error capture.
+- User interaction instrumentation.
+- Navigation telemetry.
+- Core Web Vitals.
+- CPU and memory monitoring.
+- Deployment health monitoring.
+- Bounded asynchronous telemetry export.
+
+Verify that a deliberately triggered test error can be observed through the selected monitoring mechanism.
+
+Do not collect sensitive user input values.
+
+Do not allow observability to create significant idle CPU, RAM, or disk overhead.
+
+## Phase 7 — Verify the Entire Infrastructure
+
+Create a minimal server-rendered verification page.
+
+Execute the complete pipeline:
+
+1. Start the application locally.
+2. Verify SSR.
+3. Verify operation without JavaScript.
+4. Run the E2E suite.
+5. Verify formatting and linting.
+6. Build the optimized release artifact.
+7. Deploy to staging.
+8. Verify staging health.
+9. Verify telemetry ingestion.
+10. Verify migration execution if applicable.
+11. Verify deployment automation.
+12. Verify rollback readiness.
+13. Measure idle server CPU and RAM.
+14. Confirm no unnecessary production services are running.
+
+### Mandatory infrastructure acceptance gate
+
+Do not begin product feature development until:
+
+- [ ] GitHub repository is ready.
+- [ ] Required external services are authorized.
+- [ ] Hosting is provisioned or an explicit deployment blocker is documented.
+- [ ] Local startup works with one command.
+- [ ] Production-equivalent staging works.
+- [ ] GitHub Actions CI is configured and verified.
+- [ ] E2E tests pass.
+- [ ] Automated deployment is configured and verified.
+- [ ] Observability is operational.
+- [ ] Health checks work.
+- [ ] Database and migrations work if required.
+- [ ] Backups and recovery are configured if required.
+- [ ] Production resource budgets are established.
+- [ ] No unnecessary infrastructure has been introduced.
+
+If an essential external authorization is missing, report the exact blocker and request it.
+
+Do not bypass the infrastructure gate by claiming that an unexecuted workflow is verified.
+
+## Phase 8 — Begin Website Development
+
+Only after the infrastructure foundation passes its acceptance gate may the agent begin implementing product features.
+
+For every feature:
+
+1. Research Context7 and official web specifications.
+2. Identify the simplest native implementation.
+3. Implement the Rust server behavior.
+4. Implement server-rendered HTML.
+5. Add native CSS.
+6. Add minimal vanilla JavaScript only where necessary.
+7. Preserve SSR-first and SPA-after navigation.
+8. Integrate centralized observability.
+9. Add or update E2E coverage.
+10. Run local quality checks.
+11. Profile relevant performance bottlenecks.
+12. Check low-end Android behavior.
+13. Check server CPU and memory impact.
+14. Commit changes following repository conventions.
+15. Validate CI.
+16. Deploy through the established pipeline.
+
+Do not create a second deployment system or a separate architecture for new features.
+
+## Phase 9 — Final Delivery
+
+At completion, provide:
+
+- GitHub repository reference.
+- Staging URL, if deployed.
+- Production URL, if deployed.
+- CI/CD status.
+- E2E test results.
+- Observability location.
+- Deployment and rollback instructions.
+- One-command local startup instructions.
+- Measured server resource consumption.
+- Measured browser performance where available.
+- Remaining external dependencies or limitations.
+
+Never fabricate URLs, successful deployments, test results, or performance measurements.
+
+## Absolute Execution Rule
+
+**FIRST CONNECT. THEN PROVISION. THEN CONFIGURE CI/CD. THEN VERIFY THE FOUNDATION. ONLY THEN DEVELOP THE WEBSITE.**
+
+The agent must act as a complete engineering and operations implementer, not merely a source-code generator.
+
+Minimize user questions, infrastructure complexity, production processes, operational costs, and manual work.
+
+The user should provide the product requirements and authorize necessary external services.
+
+The agent should handle the engineering implementation, verification, and delivery using the tools and permissions actually available.
+
+# Mandatory README — Complete Project & Infrastructure Directory
+
+## Core Rule
+
+**Every project MUST have a complete, accurate, continuously maintained `README.md` serving as the single entry point for development, testing, deployment, infrastructure, observability, and operations.**
+
+The README is a required production artifact, not optional documentation.
+
+A new developer or AI coding agent must be able to understand the system, locate every external service, start the entire application, reproduce production behavior, run E2E tests, inspect failures, and understand deployment and recovery procedures by reading the README.
+
+**A project is not operationally ready if its README is incomplete, outdated, or contains broken links.**
+
+## 1. Mandatory Project Overview
+
+The README MUST begin with:
+
+- Project name and purpose.
+- Brief description of what the application does.
+- Primary user journeys.
+- Technology stack.
+- Architecture summary.
+- Repository location.
+- Current deployment status.
+- Maintainer or responsible team.
+- Links to production and staging.
+- Quick-start instructions.
+
+Explain the architecture in plain language.
+
+Do not introduce excessive architectural documentation for a simple monolith.
+
+## 2. Mandatory Service & Infrastructure Directory
+
+The README MUST contain a prominent **Service Directory** near the top.
+
+List every external service, cloud resource, operational dashboard, and relevant application endpoint used by the project.
+
+Required categories, when applicable:
+
+| Category | Required information |
+|---|---|
+| Production website | Public URL, environment |
+| Staging website | URL, access requirements |
+| GitHub repository | Repository URL |
+| GitHub Actions CI | Direct workflow or Actions URL |
+| Deployment pipeline | Direct deployment workflow URL |
+| Hosting provider | Server/project management URL |
+| DNS provider | Domain management URL |
+| Domain registrar | Domain management URL |
+| Observability | Datadog/Grafana/Sentry dashboard URL |
+| Application logs | Direct log viewer URL |
+| Error tracking | Direct error dashboard URL |
+| Metrics | Direct application metrics dashboard URL |
+| Traces | Direct trace viewer URL |
+| Database | Management console URL, never credentials |
+| Object storage | Bucket or management console URL |
+| Email provider | Service dashboard URL |
+| Authentication provider | Project management URL |
+| Payment provider | Project dashboard URL |
+| Backup system | Backup management URL |
+| Uptime monitoring | Status or monitoring dashboard URL |
+| Other external integrations | Relevant service console URL |
+
+Only include services actually used by the system.
+
+Do not create empty sections for unused infrastructure.
+
+### Link requirements
+
+- Use real, verified URLs.
+- Prefer direct project-specific links over generic provider homepages.
+- Distinguish production, staging, and development resources.
+- Label links that require authentication.
+- Never expose access tokens, credentials, secret URLs, or sensitive connection strings.
+- Do not invent links.
+- If a service has not yet been provisioned, explicitly mark it as pending.
+- Update links whenever infrastructure changes.
+
+**The user must never need to search through GitHub Actions YAML or source code merely to discover where a service is hosted.**
+
+## 3. Mandatory One-Command Startup
+
+Document the exact command required to start the entire application.
+
+Default:
+
+```bash
+just dev
+```
+
+The command must start the Rust application and all required supporting dependencies.
+
+Document:
+
+- Required tools.
+- Supported operating systems.
+- First-time setup.
+- Environment variables.
+- Default local URL.
+- Database initialization.
+- Migrations.
+- Hot reload.
+- How to stop the application.
+- How to reset the local environment.
+- Common startup failures.
+
+Prefer automatic environment validation.
+
+Do not require developers to manually start several unrelated processes.
+
+## 4. Mandatory Production-Equivalent Testing
+
+The README MUST prominently document how to start a complete production-equivalent environment.
+
+Default:
+
+```bash
+just staging
+```
+
+This command must start the application using:
+
+- The actual production Rust release build.
+- Production-equivalent HTTP configuration.
+- The same database engine and compatible version.
+- The same migrations.
+- The same asset build.
+- The same security configuration model.
+- The same application routing.
+- The same observability instrumentation.
+- The same startup and shutdown behavior.
+
+Environment-specific values may differ:
+
+- Secrets.
+- Hostnames.
+- Test data.
+- Resource limits.
+- External service endpoints.
+
+### Production parity requirements
+
+Do not claim an environment is an exact production replica unless its relevant behavior and infrastructure have been verified.
+
+Document any unavoidable differences, including:
+
+- Cloud networking.
+- Managed database behavior.
+- TLS termination.
+- External provider integrations.
+- Hardware and resource limits.
+- Production-only permissions.
+- Third-party sandbox environments.
+
+**Production equivalence must be demonstrated, not merely asserted.**
+
+## 5. Mandatory Remote Staging Instructions
+
+If a remote staging environment exists, document:
+
+- Exact staging URL.
+- How to access it.
+- How staging is deployed.
+- Which branch or artifact it runs.
+- How to trigger staging deployment.
+- How to view staging logs.
+- How to inspect staging errors.
+- How to reset or reseed staging data.
+- How to run E2E tests against staging.
+- How staging differs from production.
+- How staging resources are cleaned up or suspended when unused.
+
+Staging must use the same deployable artifact as production wherever possible.
+
+Staging must never use real production secrets or destructively manipulate production data.
+
+## 6. Mandatory E2E Testing Guide
+
+Document the primary test command:
+
+```bash
+just test
+```
+
+Explain:
+
+- Which browsers are tested.
+- How test infrastructure starts.
+- How test data is created.
+- How test data is isolated.
+- How to run tests locally.
+- How to run tests against staging.
+- How to reproduce CI failures.
+- Where screenshots, traces, and logs are stored.
+- How to run mobile-oriented tests.
+- How to test with JavaScript disabled.
+- How to test SSR and SPA navigation.
+- How to investigate flaky tests.
+
+Include the actual commands used by the repository.
+
+Do not document hypothetical commands that are not implemented.
+
+## 7. Mandatory CI/CD Documentation
+
+Include direct links to:
+
+- GitHub Actions.
+- Pull request CI workflow.
+- Deployment workflow.
+- Staging environment.
+- Production environment.
+- Release artifacts, where applicable.
+
+Explain:
+
+1. What happens when a pull request is opened.
+2. Which checks are required before merging.
+3. What happens when changes merge into `main`.
+4. How the production artifact is built.
+5. How staging is verified.
+6. How production deployment occurs.
+7. How health verification works.
+8. What happens when deployment fails.
+9. How to roll back.
+10. How to identify the currently deployed version.
+
+The README must make the delivery process understandable without requiring the reader to reverse-engineer workflow files.
+
+## 8. Mandatory Observability Directory
+
+Document exactly where to find:
+
+- Server logs.
+- Browser errors.
+- User interaction events.
+- Application traces.
+- Core Web Vitals.
+- Request latency.
+- Error rates.
+- CPU usage.
+- RAM usage.
+- Database performance.
+- Deployment failures.
+- Health and uptime status.
+
+Include direct dashboard links when available.
+
+Explain how to correlate a browser error with a backend request using request or trace identifiers.
+
+Document telemetry retention and privacy constraints at an appropriate level.
+
+Do not expose sensitive production data.
+
+## 9. Mandatory Configuration & Secrets Guide
+
+Document every required environment variable in a table.
+
+For each variable, specify:
+
+- Name.
+- Purpose.
+- Required or optional.
+- Safe default, if any.
+- Environments where it is used.
+- Where its value is configured.
+
+For secrets, document only the secure storage location and rotation procedure.
+
+Never put actual secret values in the README.
+
+Maintain `.env.example` containing safe placeholders.
+
+Document which external permissions are needed for local development, CI, staging, and production.
+
+## 10. Mandatory Database & Data Management Guide
+
+When persistence exists, document:
+
+- Database engine.
+- Schema migration commands.
+- Development initialization.
+- Test data seeding.
+- Database reset procedure.
+- Backup mechanism.
+- Backup frequency.
+- Retention policy.
+- Restore procedure.
+- Database access restrictions.
+- Production data protection rules.
+
+Never suggest copying sensitive production data into local development without explicit authorization and appropriate sanitization.
+
+## 11. Mandatory Architecture & Resource Footprint
+
+Include a concise architecture description covering:
+
+- Rust server.
+- SSR rendering.
+- Native CSS and JavaScript.
+- SPA progressive enhancement.
+- Database, if present.
+- External integrations.
+- Deployment topology.
+- Required processes.
+
+Document the expected production footprint:
+
+- Number of application processes.
+- Required supporting services.
+- CPU and RAM limits.
+- Idle resource baseline when measured.
+- Peak resource measurements when available.
+- Storage requirements.
+- Connection and concurrency limits.
+
+Explain why each independently running infrastructure component exists.
+
+Avoid claiming unmeasured resource values.
+
+## 12. Mandatory Security & Access Guide
+
+Document:
+
+- Authentication mechanisms.
+- Authorization model.
+- Required repository permissions.
+- Deployment access model.
+- Secret management.
+- HTTPS and TLS termination.
+- Security reporting procedure.
+- Dependency update process.
+- Backup access restrictions.
+- Incident escalation contact or procedure.
+
+Never include credentials, private keys, recovery codes, or privileged internal access URLs that should not be exposed to repository readers.
+
+For public repositories, use a private operations document for sensitive infrastructure inventory and link to it through an access-controlled location where appropriate.
+
+## 13. Mandatory Operations & Recovery Guide
+
+The README must explain how to:
+
+- Check application health.
+- Find the currently deployed version.
+- Investigate a production error.
+- Inspect recent deployments.
+- Restart the application safely.
+- Roll back a failed release.
+- Restore a backup.
+- Handle database migration failures.
+- Respond to resource exhaustion.
+- Rotate compromised credentials.
+- Recover from unavailable external dependencies.
+
+Prefer linking to concise operational runbooks rather than duplicating lengthy procedures.
+
+## 14. Mandatory Troubleshooting
+
+Include solutions for common problems:
+
+- Application fails to start.
+- Missing environment configuration.
+- Database connection failure.
+- Migration failure.
+- Port already in use.
+- SSR rendering error.
+- SPA navigation error.
+- Browser asset loading failure.
+- E2E test failure.
+- GitHub Actions failure.
+- Deployment failure.
+- Telemetry not arriving.
+- Excessive RAM or CPU consumption.
+
+Each troubleshooting entry should point to the actual diagnostic command, log location, or dashboard.
+
+## 15. Mandatory Documentation Automation
+
+The README must be maintained as part of normal engineering work.
+
+Whenever the agent:
+
+- Adds an external service.
+- Changes hosting.
+- Changes a domain.
+- Adds a database.
+- Changes CI/CD.
+- Changes deployment behavior.
+- Adds monitoring.
+- Changes environment variables.
+- Changes startup commands.
+- Changes resource requirements.
+- Changes backup or recovery procedures.
+
+It MUST update the README in the same change.
+
+### CI documentation validation
+
+Where practical, automate checks that:
+
+- Required README sections exist.
+- Documented local commands are executable.
+- Internal relative links resolve.
+- Referenced repository paths exist.
+- Required environment variables match the documented configuration.
+- Infrastructure inventory matches maintained deployment configuration.
+- Documentation does not contain obvious secrets.
+
+External URL checks must account for authentication, rate limits, and temporary provider outages.
+
+Do not introduce a heavy documentation framework solely for these checks.
+
+## 16. README Acceptance Gate
+
+Before any project is considered production-ready, verify:
+
+- [ ] Production URL is documented.
+- [ ] Staging URL is documented when available.
+- [ ] GitHub repository link is present.
+- [ ] CI workflow link is present.
+- [ ] Deployment workflow link is present.
+- [ ] Hosting management link is present where safe.
+- [ ] All actually used cloud services are listed.
+- [ ] Observability links are present.
+- [ ] Local startup is documented and tested.
+- [ ] Production-equivalent startup is documented and tested.
+- [ ] Remote staging testing is documented.
+- [ ] E2E commands are documented and verified.
+- [ ] Environment configuration is documented.
+- [ ] Database operations are documented where applicable.
+- [ ] Deployment and rollback are documented.
+- [ ] Resource limits and measurements are documented.
+- [ ] Troubleshooting and recovery information is present.
+- [ ] No secrets are exposed.
+- [ ] All documented commands match the repository.
+- [ ] All known service links are accurate.
+
+**An incomplete README is a failed engineering acceptance gate.**
+
+## Final Rule
+
+**README.md MUST answer these questions immediately:**
+
+1. What is this project?
+2. Where is the production website?
+3. Where is the staging website?
+4. Where is the GitHub repository?
+5. Where is CI/CD?
+6. Where is the hosting infrastructure?
+7. Which external services does the system use?
+8. Where are logs, errors, traces, and metrics?
+9. How do I start the entire system locally with one command?
+10. How do I start a production-equivalent environment?
+11. How do I run real E2E tests?
+12. How do I deploy and roll back?
+13. How do I recover from a failure?
+14. What resources does the system consume?
+15. What access and credentials must be configured securely?
+
+**The README is the operational map of the entire system. Keep it complete, concise, verified, and current.**
