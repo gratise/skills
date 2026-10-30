@@ -3716,3 +3716,348 @@ Before any project is considered production-ready, verify:
 15. What access and credentials must be configured securely?
 
 **The README is the operational map of the entire system. Keep it complete, concise, verified, and current.**
+
+
+# Mandatory WebMCP Integration — Complete Human–Agent Action Parity
+
+## Absolute Requirement
+
+**Every website and web application MUST be agent-operable by design.**
+
+All meaningful actions available to a human user through the website MUST also be available to an authorized AI agent through the appropriate WebMCP interface.
+
+The system MUST provide functional parity between human interaction and agent interaction.
+
+**Human capability = Agent capability, subject to the same identity, permissions, security policies, and explicit authorization requirements.**
+
+WebMCP support is a core architectural requirement, not an optional integration added after the website is finished.
+
+## 1. Research the Current WebMCP Standard First
+
+Before implementation, the agent MUST:
+
+1. Research the current WebMCP specification and implementation status.
+2. Consult official documentation and normative specifications where available.
+3. Check Context7 for relevant current implementation guidance.
+4. Determine browser support, availability, and required permissions.
+5. Identify the correct browser-facing tool registration and invocation mechanisms.
+6. Determine which capabilities are standardized, experimental, or unavailable.
+7. Design progressive enhancement and appropriate fallback behavior.
+
+Do not invent WebMCP API names, interfaces, or browser support claims.
+
+Do not assume that a standalone MCP server is equivalent to browser-native WebMCP.
+
+If native WebMCP support is unavailable in a target environment, preserve the complete human-facing experience and provide a clearly documented, standards-compatible agent integration strategy where feasible.
+
+Never claim WebMCP conformance without testing against an actual compatible implementation.
+
+## 2. Build One Shared Action Model
+
+Human and agent interactions MUST execute the same underlying business operations.
+
+Preferred architecture:
+
+```text
+                 Rust Monolith
+                      |
+              Shared Domain Actions
+                      |
+          ┌───────────┴───────────┐
+          |                       |
+    Human Interface         Agent Interface
+    HTML / Forms / JS           WebMCP
+          |                       |
+          └───────────┬───────────┘
+                      |
+             Same Authorization
+             Same Validation
+             Same Transactions
+             Same Audit Events
+             Same Error Semantics
+```
+
+Do not create separate business logic for agents.
+
+Do not duplicate authorization, validation, or persistence behavior.
+
+The browser-facing WebMCP implementation may expose existing user-interface actions, but those actions must ultimately reach the same authoritative Rust domain operations.
+
+## 3. Complete Action Coverage
+
+For every meaningful user-facing capability, identify its agent-accessible equivalent.
+
+Examples:
+
+| Human action | Agent capability |
+|---|---|
+| Search content | Search using structured arguments |
+| Apply filters | Set and inspect filters |
+| Navigate to a page | Open or locate relevant content |
+| Create an item | Create the same item |
+| Edit an item | Update permitted fields |
+| Delete an item | Delete with appropriate authorization |
+| Submit a form | Execute equivalent validated submission |
+| Upload a file | Upload through an authorized supported mechanism |
+| Download an export | Retrieve the same permitted export |
+| Manage account settings | Read and modify permitted settings |
+| Perform checkout | Initiate the same authorized transaction |
+| Manage subscriptions | Perform permitted subscription actions |
+| View operation status | Retrieve the corresponding state |
+| Cancel an operation | Cancel when the human interface supports it |
+
+The mapping MUST be based on actual product capabilities.
+
+Do not create meaningless tools for decorative interactions.
+
+Do not omit important actions simply because they require multiple UI steps.
+
+## 4. Semantic, Discoverable Agent Tools
+
+Expose meaningful tools with:
+
+- Stable identifiers.
+- Clear descriptions.
+- Explicit input schemas.
+- Explicit output schemas where supported.
+- Predictable validation.
+- Structured errors.
+- Relevant resource identifiers.
+- Clear side-effect semantics.
+- Documented authorization requirements.
+
+Prefer task-oriented operations over low-level DOM manipulation.
+
+A tool should describe what the user can accomplish, not how to click through the page.
+
+Do not expose internal implementation details unnecessarily.
+
+Avoid registering an excessive number of redundant tools.
+
+## 5. Security and Authorization Parity
+
+WebMCP MUST NOT become an authorization bypass.
+
+Every agent action must respect:
+
+- The authenticated user's identity.
+- Existing permissions.
+- Tenant and resource boundaries.
+- Server-side validation.
+- CSRF and origin protections where applicable.
+- Rate limits.
+- Abuse prevention.
+- Transaction constraints.
+- Audit requirements.
+
+Never treat the presence of an agent or tool invocation as proof of authorization.
+
+Sensitive or irreversible actions must respect the same approval and confirmation policies as equivalent human operations.
+
+Do not automatically execute purchases, destructive actions, external communications, or permission changes without the required authorization.
+
+Do not expose secrets, private application state, or privileged administrative operations through public tool discovery.
+
+## 6. State, Errors, and Idempotency
+
+Agent actions must provide clear, machine-interpretable outcomes.
+
+Distinguish:
+
+- Success.
+- Validation failure.
+- Authentication required.
+- Permission denied.
+- Resource not found.
+- Conflict.
+- Rate limit exceeded.
+- Dependency unavailable.
+- Retryable failure.
+- Permanent failure.
+
+Where appropriate:
+
+- Support idempotency keys.
+- Prevent accidental duplicate mutations.
+- Return stable resource identifiers.
+- Support cancellation.
+- Preserve transaction boundaries.
+- Expose operation status.
+- Bound execution time.
+- Avoid ambiguous partial success.
+
+Never silently report success when the underlying operation failed.
+
+## 7. Agent-Friendly Read Capabilities
+
+Action parity requires agents to understand the current state before acting.
+
+Provide authorized mechanisms to:
+
+- Discover available actions.
+- Read relevant resources.
+- Inspect current state.
+- Identify available choices.
+- Understand validation constraints.
+- Determine action prerequisites.
+- Inspect operation results.
+- Recover from errors.
+
+Do not require agents to scrape inaccessible visual state when equivalent structured information can be provided safely.
+
+Keep structured representations consistent with the human-visible application state.
+
+## 8. Progressive Enhancement
+
+The website must remain fully usable by humans without WebMCP.
+
+WebMCP integration must not:
+
+- Block SSR.
+- Delay initial rendering.
+- Require a large JavaScript runtime.
+- Interfere with native browser navigation.
+- Break forms.
+- Prevent ordinary accessibility tools from working.
+- Increase idle CPU usage unnecessarily.
+- Introduce permanent polling.
+- Require additional backend services by default.
+
+Register or initialize agent-facing functionality only when appropriate.
+
+Use native browser capabilities wherever supported.
+
+Keep the implementation small and resource-efficient.
+
+## 9. Centralized Observability
+
+WebMCP actions MUST integrate with the existing observability system.
+
+Record appropriate structured events for:
+
+- Tool discovery failures.
+- Tool invocation.
+- Validation failures.
+- Authorization failures.
+- Execution errors.
+- Operation latency.
+- Successful mutations.
+- Retries and cancellations.
+
+Correlate agent actions with backend requests and resulting domain events.
+
+Do not duplicate telemetry infrastructure.
+
+Do not log sensitive tool arguments by default.
+
+## 10. Mandatory Human–Agent Parity Matrix
+
+Maintain an explicit parity matrix for all meaningful product actions.
+
+Example:
+
+| Capability | Human UI | WebMCP | Same backend operation | E2E verified |
+|---|---|---|---|---|
+| Search | Yes | Yes | Yes | Yes |
+| Create item | Yes | Yes | Yes | Yes |
+| Edit item | Yes | Yes | Yes | Yes |
+| Delete item | Yes | Yes | Yes | Yes |
+| Export data | Yes | Yes | Yes | Yes |
+
+The actual matrix must reflect the implemented application.
+
+Any missing agent equivalent must be treated as an incomplete feature unless a documented platform limitation or security restriction prevents it.
+
+A security restriction must apply consistently to equivalent human and agent capabilities.
+
+## 11. Mandatory WebMCP E2E Tests
+
+WebMCP functionality MUST be tested through the real supported agent-facing interface.
+
+For each meaningful capability:
+
+1. Execute the action through the human interface.
+2. Execute the equivalent action through WebMCP.
+3. Verify equivalent authorized outcomes.
+4. Verify consistent validation behavior.
+5. Verify permission boundaries.
+6. Verify observable backend state changes.
+7. Verify structured errors.
+8. Verify recovery from failures.
+9. Verify no unintended duplicate mutations.
+10. Verify correct audit and telemetry events.
+
+Include negative tests for unauthorized access and malformed inputs.
+
+Do not substitute unit tests of a tool handler for actual WebMCP end-to-end verification.
+
+When a compatible WebMCP test environment is unavailable, explicitly mark parity as unverified rather than reporting success.
+
+## 12. Mandatory README Documentation
+
+The README MUST include a dedicated **Agent Access / WebMCP** section.
+
+Document:
+
+- Whether WebMCP is supported and verified.
+- Which environments expose WebMCP.
+- How compatible agents discover available tools.
+- Required authentication and authorization.
+- Supported actions and their schemas.
+- Relevant specification and implementation documentation.
+- Known browser or client compatibility limitations.
+- How to run WebMCP E2E tests.
+- Where agent action logs and errors can be inspected.
+- Where the human–agent parity matrix is maintained.
+
+Include direct verified links to relevant documentation, dashboards, and endpoints.
+
+Never invent endpoints or claim support for untested clients.
+
+## 13. Mandatory Feature Development Rule
+
+For every new product feature, the agent MUST implement the human and agent interfaces together.
+
+Required sequence:
+
+1. Research native browser capabilities and current WebMCP support.
+2. Define the shared Rust domain operation.
+3. Define authorization and validation.
+4. Implement SSR and the human-facing interface.
+5. Implement the corresponding WebMCP capability.
+6. Integrate observability.
+7. Add human-facing E2E coverage.
+8. Add WebMCP E2E coverage.
+9. Verify functional parity.
+10. Update the README and parity matrix.
+
+**A feature is not complete when only the human interface works.**
+
+## 14. Mandatory Acceptance Gate
+
+Before marking any website or feature complete:
+
+- [ ] Current WebMCP specification was researched.
+- [ ] WebMCP support and limitations were documented.
+- [ ] Meaningful human actions were inventoried.
+- [ ] Agent equivalents were implemented.
+- [ ] Human and agent actions share authoritative business logic.
+- [ ] Authorization and validation are consistent.
+- [ ] Tool schemas are meaningful and discoverable.
+- [ ] Mutations have appropriate confirmation and idempotency behavior.
+- [ ] WebMCP failures are observable.
+- [ ] WebMCP E2E tests pass in supported environments.
+- [ ] Human–agent parity matrix is complete.
+- [ ] README documents agent access.
+- [ ] WebMCP introduces no unnecessary production services.
+- [ ] Resource overhead is measured and bounded.
+
+## Final Rule
+
+**Every meaningful action a human can perform through the website must have an equivalent authorized agent operation.**
+
+**One domain model. One authorization model. One validation model. Two interaction surfaces: human and agent.**
+
+**No separate agent backend. No duplicated business logic. No unnecessary infrastructure.**
+
+**WebMCP is mandatory from project inception, not an afterthought.**
